@@ -2,7 +2,7 @@
 
 > RideQuote should invest in a gated, monitored trip-time pipeline instead of one-off notebooks, because its gates caught short quotes a notebook would have shipped.
 
-Evidence: our first model passed every check on a random split (bias -0.70 min). On the time-ordered validation split it failed the `bias` gate (-1.63 min, limit -1.0), so it was not released.
+Evidence: our first model passed every check on a random split (bias -0.70 min). On the time-ordered validation split it failed the `bias` gate (-1.64 min, limit -1.0), so it was not released.
 
 ## 1. Business case
 
@@ -18,7 +18,7 @@ Target level: pipeline. Training is reproducible and tested, CI runs the tests a
 
 ### Problem and baseline
 
-Riders get unreliable trip-time quotes because today's quote is one fixed median per zone pair: the same time at 8 a.m. on a Tuesday as at 10 p.m. on a Saturday. The product team feels this as complaints and cancelled bookings. The lookup's average error is 5.0 min for morning pickups against 3.7 min late in the evening.
+Riders get unreliable trip-time quotes because today's quote is one fixed median per zone pair: the same time at 8 a.m. on a Tuesday as at 10 p.m. on a Saturday. The product team feels this as complaints and cancelled bookings. The lookup's average error is 4.9 min for morning pickups and 5.2 min at midday, against 3.5 min late in the evening.
 
 Baseline (today's lookup, built from training trips only, scored on the time-ordered validation split, January 2024): on-time quotes (within ±3 min) 53.0%, big misses (more than 10 min off) 10.0%, mae 4.56 min, bias -2.22 min (quotes run short).
 
@@ -39,7 +39,7 @@ Rule: the model must make at least 10% fewer errors than today's lookup on every
 
 The bias range is asymmetric because short quotes make riders late. The ±3 min tolerance and the bias range are assumptions for the product owner to confirm. Limit: under 0.2 s per quote (about 24 ms measured).
 
-Current model (preliminary until the pipeline reproduces it): validation mae 3.56, on-time 58.8%, big misses 5.3%, bias -0.87. All five gates pass. Test and February were used during development, so the final check is March 2024, held back and scored once.
+Current model (reproduced by the notebook pipeline): validation mae 3.55, on-time 58.6%, big misses 5.4%, bias -0.86. All five gates pass. Test and February were used during development, so the final check is March 2024, held back and scored once.
 
 ### Solution
 
@@ -63,7 +63,7 @@ Personal data: the public TLC data has none (zone level only). In RideQuote's lo
 
 ### Value, cost and risks
 
-Benefit (February 2024, preliminary, stand-in data): against today's lookup, mae 3.51 vs 4.38 min, on-time 59.1% vs 54.3%, big misses 5.1% vs 9.3% (45% fewer). Against a cheaper zone-pair x time-of-day lookup, mae is still 17% lower.
+Benefit (February 2024, preliminary, stand-in data): against today's lookup, mae 3.51 vs 4.38 min, on-time 59.2% vs 54.3%, big misses 5.1% vs 9.3% (45% fewer). Against a cheaper zone-pair x time-of-day lookup, mae is still 17% lower.
 
 Cost (estimates): about 105,000 EUR to build and release (131 person-days) and about 11,000 EUR to run in year one.
 
@@ -73,7 +73,7 @@ Break-even scenario (assumptions: 3 EUR per completed booking, 300,000 bookings 
 | --- | --- |
 | Small on-time margin | Pilot stage acts as a gate; one-switch rollback to the lookup |
 | Quotes drifting short over time | Weekly bias monitoring; retraining on recent months |
-| Weaker quality in outer boroughs (Queens bias -1.75) | Report gates per borough; show a range there until bias passes |
+| Weaker quality in outer boroughs (Queens bias -2.2) | Report gates per borough; show a range there until bias passes |
 | Bad or changed input data | Validation stops the run; unknown zones go to the lookup |
 | Service down or slow | 0.2 s timeout with automatic fallback to the lookup |
 
@@ -81,7 +81,7 @@ Scales to: green taxis and for-hire vehicles, and other cities with zone-based t
 
 ### Open gaps
 
-- Model numbers are preliminary until the pipeline reproduces them
+- Model numbers come from the notebook; the modular pipeline must reproduce them
 - Validate on RideQuote's own trips, including the requested pickup time
 - Product owner to confirm the ±3 min tolerance, bias range and 10% rule
 - Pilot to confirm the break-even assumptions
