@@ -39,7 +39,7 @@ Rule: the model must make at least 10% fewer errors than today's lookup on every
 
 The bias range is asymmetric because short quotes make riders late. The ±3 min tolerance and the bias range are assumptions for the product owner to confirm. Limit: under 0.2 s per quote (about 24 ms measured).
 
-Current model (reproduced by the notebook pipeline): validation mae 3.55, on-time 58.6%, big misses 5.4%, bias -0.86. All five gates pass. Test and February were used during development, so the final check is March 2024, held back and scored once.
+Current model (reproduced by the modular pipeline, `python -m src.main`): validation mae 3.55, on-time 58.6%, big misses 5.4%, bias -0.86. All five gates pass on the validation and test splits. Final check (March 2024, held back and scored once with the released model, `notebooks/final_check_2024_03.ipynb`): mae 3.79, on-time 57.6%, big misses 6.7%, bias -1.13. Two gates are not met: `bias` (limit -1.0) and `on_time_share` (57.7%). Quotes drifted short one month after validation, the risk listed below; nothing was retuned on this result.
 
 ### Solution
 
@@ -47,7 +47,7 @@ The rider sees an estimated trip time in minutes on the booking screen, to decid
 
 Inputs, all known at booking: pickup and drop-off zone, requested pickup time and passenger count. Derived from these: zone distance, borough, airport flags and typical times per route and time of day, learned from training trips only.
 
-If the model is unavailable, the screen shows today's lookup quote. If a zone pair was rarely seen in training, the screen shows a range instead of a single number. The estimate is information only: it sets no price or dispatch order.
+Bookings with an unknown pickup or drop-off zone are still quoted by the model, with the missing distance filled in from training data. If the model service is down, the app would fall back to today's lookup quote; that fallback is part of the production plan, not this pipeline. If a zone pair was rarely seen in training, the screen shows a range instead of a single number. The estimate is information only: it sets no price or dispatch order.
 
 ### Data
 
@@ -74,16 +74,83 @@ Break-even scenario (assumptions: 3 EUR per completed booking, 300,000 bookings 
 | Small on-time margin | Pilot stage acts as a gate; one-switch rollback to the lookup |
 | Quotes drifting short over time | Weekly bias monitoring; retraining on recent months |
 | Weaker quality in outer boroughs (Queens bias -2.2) | Report gates per borough; show a range there until bias passes |
-| Bad or changed input data | Validation stops the run; unknown zones go to the lookup |
+| Bad or changed input data | Validation stops the run; bookings with unknown zones still get a model quote, with the distance filled in |
 | Service down or slow | 0.2 s timeout with automatic fallback to the lookup |
 
 Scales to: green taxis and for-hire vehicles, and other cities with zone-based trip logs.
 
 ### Open gaps
 
-- Model numbers come from the notebook; the modular pipeline must reproduce them
+- March 2024 final check misses the `bias` and `on_time_share` gates: retrain on recent months and monitor bias weekly before any pilot (product owner decides the release)
 - Validate on RideQuote's own trips, including the requested pickup time
 - Product owner to confirm the ±3 min tolerance, bias range and 10% rule
 - Pilot to confirm the break-even assumptions
 - Check performance on summer trips before the first summer
-- Not implemented in this project (production plan): the client pilot, rollback switch, monthly retraining, per-borough monitoring, range display and summer check
+- Not implemented in this project (production plan): the client pilot, lookup fallback when the model is down, rollback switch, monthly retraining, per-borough monitoring, range display and summer check
+
+## 2. How to use
+
+RideQuote's trip-time pipeline: one command loads, cleans, validates, splits by time, trains, checks the quality gates and quotes new bookings. The business case above explains why.
+
+### Install
+
+```bash
+conda env create -f environment.yml
+conda activate ridequote-eta
+```
+
+### Data
+
+`data/` is git-ignored. Place the files at the paths set in `config.yaml`:
+
+- `data/raw/yellow_trips_2024_01.csv` (training trips)
+- `data/reference/taxi_zones.csv` (zone table)
+- `data/inference/new_bookings_2024_02.csv` (new bookings to quote)
+- `data/final_check/yellow_trips_2024_03.csv` (March final check, used only by the notebook)
+
+### Run
+
+```bash
+python -m src.main
+```
+
+Writes `data/processed/clean.csv`, `models/model.joblib` and `reports/predictions.csv`, and logs every step to the terminal and `logs/pipeline.log`. Bad data stops the run with exit code 1; gates that are not met are reported and the run finishes.
+
+### Test
+
+```bash
+pytest --cov=src --cov-branch
+flake8 --isolated --max-line-length=120 --extend-ignore=E203 src tests
+```
+
+### Structure
+
+```text
+config.yaml        every setting: paths, cleaning rules, features, model, gates
+src/main.py        orchestrator: python -m src.main
+src/config.py      loads config.yaml
+src/load_data.py   reads the raw trips
+src/clean_data.py  cleaning rules and booking-time inputs
+src/validate.py    data checks: stops the run on bad data
+src/features.py    unfitted preprocessing recipe
+src/train.py       fits recipe and model (the only fit)
+src/evaluate.py    metrics for the quality gates
+src/infer.py       quotes new bookings
+src/utils.py       CSV and model read/write helpers
+tests/             one test file per module, plus the pipeline test
+notebooks/         final_check_2024_03.ipynb (March, scored once)
+TEAM_BRIEF.md      team decisions and contracts
+```
+
+### Owners
+
+This project was developed collaboratively by the team. Each team member owned the implementation and testing of their assigned modules, integrated their work into the repository, ran the relevant tests, opened the corresponding pull request, and acted as the point of contact for their module. Every pull request was reviewed by another team member.
+
+**Repository administrator:** Samuel Elizondo Ramírez (@samuelelizondor)
+
+- **Samuel Elizondo Ramírez (@samuelelizondor):** team setup, `config.py`, `main.py`, and pipeline test
+- **Aryo Wicaksono (@aryoar):** `utils.py`, `load_data.py`
+- **Jeevan Sreekumar (@jeevansree):** `clean_data.py`
+- **Marc Mansour (@MarcMansour02):** `validate.py`
+- **Rebeca Soriano Abejón (@rebecasorianoo):** `features.py`, `train.py`
+- **Rafael Sastre Perelló (@rsastreper):** `evaluate.py`, `infer.py`
