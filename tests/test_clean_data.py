@@ -190,7 +190,6 @@ def test_unit_bad_pickup_times_raise():
         clean_dataframe(bad, zone_table=_make_zone_table(), rules=_make_rules())
 
 
-@pytest.mark.skip(reason="Awaiting validate in dev")
 def test_integration_inference_keeps_every_booking_and_passes_validate():
     """Inference mode keeps all 7 bookings (zone 264 included) and the output passes validate_dataframe."""
     from src.validate import validate_dataframe
