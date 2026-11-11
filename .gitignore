@@ -43,3 +43,6 @@ models/**
 reports/**
 !reports/
 !reports/README.md
+
+# Pipeline logs: written by every run, never committed
+logs/

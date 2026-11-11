@@ -1,13 +1,27 @@
-# environment.yml  [Dependencies]
-# -------------------------------------------------------------------
-# Purpose   List the packages (and Python version) the project needs
-# Used by   You and your teammates: conda env create -f environment.yml
-# Why       Everyone runs the same code on the same versions ("works on my machine" ends here)
-#
-# Typical groups
-#   data and modelling    e.g. pandas, scikit-learn, joblib
-#   notebooks and plots   exploration only
-#   quality (stage 2)     test runner, coverage, style checker
-#   stage 3               config, tracking, serving and locking tools
-#
-# Stage 3: conda-lock.yml freezes these into exact versions for CI and Docker
+# environment.yml: conda environment for the RideQuote trip-time pipeline, tests and notebook.
+# Rebuild with: conda env create -f environment.yml
+name: ridequote-eta
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+
+  # Pipeline: what src/ imports to run
+  - pandas
+  - numpy
+  - scikit-learn>=1.9  # KFold as TargetEncoder cv; the saved model loads only with a matching version
+  - joblib
+  - pyyaml  # reads config.yaml (yaml.safe_load)
+
+  # Development tools: check the code, not needed to run it
+  - pytest
+  - pytest-cov  # coverage report: pytest --cov=src
+  - black  # formatter, run before flake8
+  - flake8  # style checker
+  - radon  # cyclomatic complexity per function: radon cc src -s
+  - pylint  # code quality rating, as the grader runs it: pylint src
+
+  # Notebook only: exploration, never imported by src/
+  - matplotlib  # charts
+  - pyarrow  # read_parquet for the TLC monthly files (download step)
+  - ipykernel  # run the notebook in VS Code with this environment
