@@ -151,6 +151,6 @@ This project was developed collaboratively by the team. Each team member owned t
 - **Samuel Elizondo Ramírez (@samuelelizondor):** team setup, `config.py`, `main.py`, and pipeline test
 - **Aryo Wicaksono (@aryoar):** `utils.py`, `load_data.py`
 - **Jeevan Sreekumar (@jeevansree):** `clean_data.py`
-- **Marc Mansour (@MarcMansour02):** `validate.py`
-- **Rebeca Soriano Abejón (@rebecasorianoo):** `features.py`, `train.py`
+- **Rebeca Soriano Abejón (@rebecasorianoo):** `validate.py`
+- **Marc Mansour (@MarcMansour02):** `features.py`, `train.py`
 - **Rafael Sastre Perelló (@rsastreper):** `evaluate.py`, `infer.py`
