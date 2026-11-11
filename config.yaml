@@ -1,14 +1,139 @@
 # config.yaml  [Settings: single source of truth]
 # -------------------------------------------------------------------
 # Purpose   Every NON-SECRET setting the pipeline needs, in one place
-# Read by   main.py (stage 3: through src/config.py), later also api.py
+# Read by   main.py through src/config.py (load_config); later also api.py
 # Why       Change the target, features or split sizes without touching code
 # Never     Secrets (API keys, passwords). Those go in .env
-#
-# Typical sections
-#   paths     where raw data, model, inference data and predictions live
-#   problem   target column, problem type (classification or regression), ID column
-#   split     test size, validation size, random seed
-#
-# Stage 2: the same values live in a SETTINGS dictionary at the top of src/main.py
-# Stage 3: main.py reads this file instead, with the same key names
+# Quoting   Values starting with YAML indicators (>=, <=, %) are quoted
+
+paths:
+  raw_data: data/raw/yellow_trips_2024_01.csv
+  zone_table: data/reference/taxi_zones.csv
+  processed_data: data/processed/clean.csv
+  model: models/model.joblib
+  inference_data: data/inference/new_bookings_2024_02.csv
+  predictions: reports/predictions.csv
+  log_file: logs/pipeline.log
+
+problem:
+  target_column: duration_min
+  problem_type: regression
+  id_column: trip_id
+  time_column: tpep_pickup_datetime
+
+# Time-ordered: earliest 70% train, next 15% validation, last 15% test.
+split:
+  test_size: 0.15
+  val_size: 0.15
+  random_state: 42
+  shuffle: false
+
+cleaning:
+  columns:
+    pickup_datetime: tpep_pickup_datetime
+    dropoff_datetime: tpep_dropoff_datetime
+    pickup_zone: PULocationID
+    dropoff_zone: DOLocationID
+    meter_distance: trip_distance
+  zone_columns:
+    zone_id: LocationID
+    zone_borough: borough
+    centre_x: x_km
+    centre_y: y_km
+  derived_columns:
+    hour: pickup_hour
+    weekday: pickup_weekday
+    weekend: is_weekend
+    pickup_borough: pu_borough
+    dropoff_borough: do_borough
+    pickup_airport: pu_airport
+    dropoff_airport: do_airport
+    distance: straight_km
+    same_zone_flag: same_zone
+    pair: zone_pair
+    pair_band_key: pair_band
+    pickup_band_key: pu_band
+    dropoff_band_key: do_band
+  unknown_borough: Unknown
+  day_types: [wd, we]
+  miles_to_km: 1.609
+  datetime_format: "%Y-%m-%d %H:%M:%S"
+  leakage_columns:
+    - tpep_dropoff_datetime
+    - trip_distance
+    - fare_amount
+    - extra
+    - mta_tax
+    - tip_amount
+    - tolls_amount
+    - improvement_surcharge
+    - total_amount
+    - congestion_surcharge
+    - Airport_fee
+    - cbd_congestion_fee
+    - payment_type
+  not_at_booking_columns: [VendorID, RatecodeID]
+  other_drop_columns: [store_and_fwd_flag]
+  unknown_zones: [264, 265]
+  airport_zones: [1, 132, 138]
+  min_minutes: 1.0
+  max_minutes: 180.0
+  max_speed_kmh: 100.0
+  time_band_edges: [-1, 5, 9, 15, 19, 23]
+  time_band_labels: [night, morning, midday, evening, late]
+
+features:
+  numeric:
+    - straight_km
+    - pickup_hour
+    - pickup_weekday
+    - is_weekend
+    - passenger_count
+    - same_zone
+    - pu_airport
+    - do_airport
+  categorical: [pu_borough, do_borough]
+  target_encoded:
+    - PULocationID
+    - DOLocationID
+    - zone_pair
+    - pair_band
+    - pu_band
+    - do_band
+
+recipe:
+  target_encoder_folds: 5
+
+model:
+  model_type: hist_gradient_boosting
+  loss: quantile
+  quantile: 0.58
+  max_iter: 300
+  learning_rate: 0.1
+
+validation:
+  non_negative_columns: [passenger_count, straight_km]
+  valid_zone_range: [1, 265]
+
+business:
+  on_time_minutes: 3
+  big_miss_minutes: 10
+
+# Fixed in the README business case; never changed to fit a result.
+quality_gates:
+  - {metric_key: mae, comparison: "<=", threshold: 4.10}
+  - {metric_key: on_time_share, comparison: ">=", threshold: 0.577}
+  - {metric_key: big_miss_share, comparison: "<=", threshold: 0.090}
+  - {metric_key: bias, comparison: "between", threshold: [-1.0, 2.0]}
+
+test_gate:
+  max_test_to_val_mae: 1.05
+
+output:
+  prediction_column: eta_minutes
+  decimals: 1
+  context_columns: [tpep_pickup_datetime, PULocationID, DOLocationID]
+
+logging:
+  level: INFO
+  format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
