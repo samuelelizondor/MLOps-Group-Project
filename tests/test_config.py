@@ -46,7 +46,6 @@ def test_unit_bad_config_files_raise(tmp_path):
         load_config(path, required_sections=("paths", "problem", "split"))
 
 
-@pytest.mark.skip(reason="Awaiting main in dev")
 def test_integration_repo_config_loads_with_every_section_main_needs():
     """The repo's config.yaml loads with main.py's sections; quoted YAML values arrive intact."""
     from src import config
