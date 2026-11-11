@@ -92,9 +92,9 @@ This project was developed collaboratively by the team. Each team member owned t
 - `utils` -> Aryo Wicaksono (@aryoar), branch `feature/utils`
 - `load_data` -> Aryo Wicaksono (@aryoar), branch `feature/load-data`
 - `clean_data` -> Jeevan Sreekumar (@jeevansree), branch `feature/clean-data`
-- `validate` -> Marc Mansour (@MarcMansour02), branch `feature/validate`
-- `features` -> Rebeca Soriano Abejón (@rebecasorianoo), branch `feature/features`
-- `train` -> Rebeca Soriano Abejón (@rebecasorianoo), branch `feature/train`
+- `validate` -> Rebeca Soriano Abejón (@rebecasorianoo), branch `feature/validate`
+- `features` -> Marc Mansour (@MarcMansour02), branch `feature/features`
+- `train` -> Marc Mansour (@MarcMansour02), branch `feature/train`
 - `evaluate` -> Rafael Sastre Perelló (@rsastreper), branch `feature/evaluate`
 - `infer` -> Rafael Sastre Perelló (@rsastreper), branch `feature/infer`
 - `config` and `main` -> Samuel Elizondo Ramírez (@samuelelizondor), branches `feature/team-setup`, `feature/main`
